@@ -1,7 +1,10 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:nitroscanner/ui/etiquetas.dart';
 import 'package:nitroscanner/ui/faixa.dart';
 import 'package:nitroscanner/ui/info.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class HomePage extends StatelessWidget {
   const HomePage({super.key});
@@ -39,7 +42,47 @@ class HomePage extends StatelessWidget {
                           _GradientButton(
                             label: 'Escanear Etiquetas',
                             icon: Icons.camera_alt,
-                            onTap: () {
+                            onTap: () async {
+                              final prefs = await SharedPreferences.getInstance();
+                              final codigosJson = prefs.getString('codigos_etiquetas');
+                              List<dynamic> codigosSalvos = [];
+
+                              if (codigosJson != null) {
+                                try {
+                                  codigosSalvos = jsonDecode(codigosJson) as List<dynamic>;
+                                } catch (e) {
+                                  codigosSalvos = [];
+                                }
+                              }
+
+                              if (codigosSalvos.isNotEmpty) {
+                                final escolha = await showDialog<bool>(
+                                  context: context,
+                                  builder: (context) => AlertDialog(
+                                    title: const Text('Códigos já existem'),
+                                    content: const Text(
+                                      'Existem códigos escaneados salvos. Deseja continuar com eles ou limpar antes de prosseguir?',
+                                    ),
+                                    actions: [
+                                      TextButton(
+                                        onPressed: () => Navigator.pop(context, false),
+                                        child: const Text('Limpar'),
+                                      ),
+                                      ElevatedButton(
+                                        onPressed: () => Navigator.pop(context, true),
+                                        child: const Text('Continuar'),
+                                      ),
+                                    ],
+                                  ),
+                                );
+
+                                if (escolha == null) return;
+
+                                if (!escolha) {
+                                  await prefs.remove('codigos_etiquetas');
+                                }
+                              }
+
                               Navigator.push(
                                 context,
                                 MaterialPageRoute(builder: (context) => const EtiquetasPage()),
@@ -65,8 +108,8 @@ class HomePage extends StatelessWidget {
                 const Padding(
                   padding: EdgeInsets.only(bottom: 120),
                   child: Text(
-                    'Desenvolvido por Thiago Araújo - Matrícula 6099 💙',
-                    style: TextStyle(fontSize: 13, color: Colors.grey),
+                    'Desenvolvido por Thiago Araújo - Matrícula 6099',
+                    style: TextStyle(fontSize: 10, color: Colors.grey),
                   ),
                 ),
               ],
