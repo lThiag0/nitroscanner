@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:nitroscanner/ui/scanneretiqueta.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
-
+import 'package:share_plus/share_plus.dart';
 import 'package:nitroscanner/ui/faixa.dart';
 import 'package:nitroscanner/model/codigo_etiqueta.dart';
 import 'package:nitroscanner/ui/scannercamera.dart';
@@ -28,16 +28,69 @@ class _EtiquetasPageState extends State<EtiquetasPage> {
     final jsonString = prefs.getString('codigos_etiquetas');
 
     if (jsonString != null) {
-      final List<dynamic> jsonList = json.decode(jsonString);
-      setState(() {
-        codigosLidos = jsonList
-            .map((e) => CodigoEtiqueta.fromJson(e as Map<String, dynamic>))
-            .toList();
-      });
+      try {
+        final List<dynamic> jsonList = json.decode(jsonString);
+        setState(() {
+          codigosLidos = jsonList
+              .map((e) => CodigoEtiqueta.fromJson(e as Map<String, dynamic>))
+              .toList();
+        });
+      } catch (e) {
+        await prefs.remove('codigos_etiquetas');
+        setState(() {
+          codigosLidos = [];
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Erro ao carregar códigos, codigos foram zerados!'),
+          backgroundColor: Colors.redAccent,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      }
     } else {
       setState(() {
         codigosLidos = [];
       });
+    }
+  }
+
+void _compartilharCodigos() {
+    if (codigosLidos.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Nenhum código escaneado para compartilhar.'),
+          backgroundColor: Colors.redAccent,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
+
+    final texto = StringBuffer();
+    texto.writeln('Escaneamento Inteligente NitroScanner\n');
+
+    void adicionarBloco(String etiqueta, String titulo) {
+      final codigos = codigosLidos.where((e) => e.etiqueta == etiqueta).map((e) => e.codigo).toList();
+      if (codigos.isNotEmpty) {
+        texto.writeln('$titulo:');
+        for (var codigo in codigos) {
+          texto.writeln('$codigo,');
+        }
+        texto.writeln();
+      }
+    }
+
+    adicionarBloco('Branca', 'Etiquetas Brancas');
+    adicionarBloco('Amarela', 'Etiquetas Amarelas');
+    adicionarBloco('Duplicada', 'Etiquetas Duplicadas');
+
+    try {
+      Share.share(texto.toString());
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Erro ao compartilhar: $e')),
+      );
     }
   }
 
@@ -61,11 +114,25 @@ class _EtiquetasPageState extends State<EtiquetasPage> {
   }
 
   void _limparCodigos() async {
+    if (codigosLidos.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Nenhum código escaneado para limpar.'),
+          backgroundColor: Colors.redAccent,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
+
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove('codigos_etiquetas');
     setState(() {
       codigosLidos.clear();
     });
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Codigos limpos com sucesso')),
+    );
   }
 
   void _mostrarModal(String etiqueta) {
@@ -264,7 +331,29 @@ class _EtiquetasPageState extends State<EtiquetasPage> {
                     children: [
                       Expanded(
                         child: ElevatedButton.icon(
-                          onPressed: _limparCodigos,
+                          onPressed: () async {
+                            final confirmar = await showDialog<bool>(
+                              context: context,
+                              builder: (context) => AlertDialog(
+                                title: const Text('Confirmar Limpeza'),
+                                content: const Text('Tem certeza que deseja apagar todos os códigos escaneados?'),
+                                actions: [
+                                  TextButton(
+                                    onPressed: () => Navigator.pop(context, false),
+                                    child: const Text('Cancelar'),
+                                  ),
+                                  ElevatedButton(
+                                    onPressed: () => Navigator.pop(context, true),
+                                    child: const Text('Limpar'),
+                                  ),
+                                ],
+                              ),
+                            );
+
+                            if (confirmar == true) {
+                              _limparCodigos();
+                            }
+                          },
                           icon: const Icon(Icons.delete_forever),
                           label: const Text(
                             'Limpar',
@@ -283,7 +372,7 @@ class _EtiquetasPageState extends State<EtiquetasPage> {
                       const SizedBox(width: 16),
                       Expanded(
                         child: ElevatedButton.icon(
-                          onPressed: _salvarCodigos,
+                          onPressed: _compartilharCodigos,
                           icon: const Icon(Icons.send),
                           label: const Text(
                             'Enviar',
@@ -316,8 +405,16 @@ class _EtiquetasPageState extends State<EtiquetasPage> {
     required Color color,
     required VoidCallback onPressed,
   }) {
-    return SizedBox(
+    return Container(
       width: double.infinity,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(12),
+        gradient: const LinearGradient(
+          colors: [Color(0xFF3AA0FF), Color(0xFF6ECBFF)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+      ),
       child: ElevatedButton.icon(
         onPressed: onPressed,
         icon: Icon(icon, size: 24),
@@ -326,13 +423,13 @@ class _EtiquetasPageState extends State<EtiquetasPage> {
           style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
         ),
         style: ElevatedButton.styleFrom(
-          backgroundColor: color,
+          backgroundColor: Colors.transparent,
+          shadowColor: Colors.transparent,
           foregroundColor: Colors.white,
           padding: const EdgeInsets.symmetric(vertical: 18),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
           ),
-          elevation: 4,
         ),
       ),
     );
