@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:nitroscanner/ui/etiquetas.dart';
 import 'package:nitroscanner/ui/faixa.dart';
 import 'package:nitroscanner/ui/info.dart';
+import 'package:nitroscanner/ui/placas.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class HomePage extends StatelessWidget {
@@ -35,7 +36,7 @@ class HomePage extends StatelessWidget {
                             ),
                           const Text(
                             'Leitor inteligente de códigos',
-                            style: TextStyle(fontSize: 14, color: Colors.black54),
+                            style: TextStyle(fontSize: 12, color: Colors.black54),
                             textAlign: TextAlign.center,
                           ),
                           const SizedBox(height: 40),
@@ -57,6 +58,7 @@ class HomePage extends StatelessWidget {
 
                               if (codigosSalvos.isNotEmpty) {
                                 final escolha = await showDialog<bool>(
+                                  // ignore: use_build_context_synchronously
                                   context: context,
                                   builder: (context) => AlertDialog(
                                     title: const Text('Códigos já existem'),
@@ -84,8 +86,62 @@ class HomePage extends StatelessWidget {
                               }
 
                               Navigator.push(
+                                // ignore: use_build_context_synchronously
                                 context,
                                 MaterialPageRoute(builder: (context) => const EtiquetasPage()),
+                              );
+                            },
+                          ),
+                          const SizedBox(height: 20),
+                          _GradientButton(
+                            label: 'Escanear Placas',
+                            icon: Icons.document_scanner,
+                            onTap: () async {
+                              final prefs = await SharedPreferences.getInstance();
+                              final codigosJson = prefs.getString('codigos_placas');
+                              List<dynamic> codigosSalvos = [];
+
+                              if (codigosJson != null) {
+                                try {
+                                  codigosSalvos = jsonDecode(codigosJson) as List<dynamic>;
+                                } catch (e) {
+                                  codigosSalvos = [];
+                                }
+                              }
+
+                              if (codigosSalvos.isNotEmpty) {
+                                final escolha = await showDialog<bool>(
+                                  // ignore: use_build_context_synchronously
+                                  context: context,
+                                  builder: (context) => AlertDialog(
+                                    title: const Text('Códigos já existem'),
+                                    content: const Text(
+                                      'Existem códigos escaneados salvos. Deseja continuar com eles ou limpar antes de prosseguir?',
+                                    ),
+                                    actions: [
+                                      TextButton(
+                                        onPressed: () => Navigator.pop(context, false),
+                                        child: const Text('Limpar'),
+                                      ),
+                                      ElevatedButton(
+                                        onPressed: () => Navigator.pop(context, true),
+                                        child: const Text('Continuar'),
+                                      ),
+                                    ],
+                                  ),
+                                );
+
+                                if (escolha == null) return;
+
+                                if (!escolha) {
+                                  await prefs.remove('codigos_placas');
+                                }
+                              }
+
+                              Navigator.push(
+                                // ignore: use_build_context_synchronously
+                                context,
+                                MaterialPageRoute(builder: (context) => const PlacasPage()),
                               );
                             },
                           ),

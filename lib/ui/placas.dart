@@ -1,21 +1,21 @@
 import 'package:flutter/material.dart';
-import 'package:nitroscanner/ui/scanneretiqueta.dart';
+import 'package:nitroscanner/ui/scannercam.dart';
+import 'package:nitroscanner/ui/scannerplaca.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 import 'package:share_plus/share_plus.dart';
 import 'package:nitroscanner/ui/faixa.dart';
-import 'package:nitroscanner/model/codigo_etiqueta.dart';
-import 'package:nitroscanner/ui/scannercamera.dart';
+import 'package:nitroscanner/model/codigo_placa.dart';
 
-class EtiquetasPage extends StatefulWidget {
-  const EtiquetasPage({super.key});
+class PlacasPage extends StatefulWidget {
+  const PlacasPage({super.key});
 
   @override
-  State<EtiquetasPage> createState() => _EtiquetasPageState();
+  State<PlacasPage> createState() => _PlacasPageState();
 }
 
-class _EtiquetasPageState extends State<EtiquetasPage> {
-  List<CodigoEtiqueta> codigosLidos = [];
+class _PlacasPageState extends State<PlacasPage> {
+  List<CodigoPlaca> codigosLidosPlacas = [];
 
   @override
   void initState() {
@@ -25,20 +25,20 @@ class _EtiquetasPageState extends State<EtiquetasPage> {
 
   Future<void> _carregarCodigos() async {
     final prefs = await SharedPreferences.getInstance();
-    final jsonString = prefs.getString('codigos_etiquetas');
+    final jsonString = prefs.getString('codigos_placas');
 
     if (jsonString != null) {
       try {
         final List<dynamic> jsonList = json.decode(jsonString);
         setState(() {
-          codigosLidos = jsonList
-              .map((e) => CodigoEtiqueta.fromJson(e as Map<String, dynamic>))
+          codigosLidosPlacas = jsonList
+              .map((e) => CodigoPlaca.fromJson(e as Map<String, dynamic>))
               .toList();
         });
       } catch (e) {
-        await prefs.remove('codigos_etiquetas');
+        await prefs.remove('codigos_placas');
         setState(() {
-          codigosLidos = [];
+          codigosLidosPlacas = [];
         });
         // ignore: use_build_context_synchronously
         ScaffoldMessenger.of(context).showSnackBar(
@@ -51,13 +51,13 @@ class _EtiquetasPageState extends State<EtiquetasPage> {
       }
     } else {
       setState(() {
-        codigosLidos = [];
+        codigosLidosPlacas = [];
       });
     }
   }
 
 void _compartilharCodigos() {
-    if (codigosLidos.isEmpty) {
+    if (codigosLidosPlacas.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Nenhum código escaneado para compartilhar.'),
@@ -71,8 +71,8 @@ void _compartilharCodigos() {
     final texto = StringBuffer();
     texto.writeln('Escaneamento Inteligente NitroScanner\n');
 
-    void adicionarBloco(String etiqueta, String titulo) {
-      final codigos = codigosLidos.where((e) => e.etiqueta == etiqueta).map((e) => e.codigo).toList();
+    void adicionarBloco(String placa, String titulo) {
+      final codigos = codigosLidosPlacas.where((e) => e.placa == placa).map((e) => e.codigo).toList();
       if (codigos.isNotEmpty) {
         texto.writeln('$titulo:');
         for (var codigo in codigos) {
@@ -82,9 +82,9 @@ void _compartilharCodigos() {
       }
     }
 
-    adicionarBloco('Branca', 'Etiquetas Brancas');
-    adicionarBloco('Amarela', 'Etiquetas Amarelas');
-    adicionarBloco('Duplicada', 'Etiquetas Duplicadas');
+    adicionarBloco('Pequena', 'Placas Pequenas');
+    adicionarBloco('Grande', 'Placas Grandes');
+    adicionarBloco('Duplicada', 'Placas Duplicadas');
 
     try {
       Share.share(texto.toString());
@@ -97,25 +97,25 @@ void _compartilharCodigos() {
 
   Future<void> _salvarCodigos() async {
     final prefs = await SharedPreferences.getInstance();
-    final jsonString = json.encode(codigosLidos.map((e) => e.toJson()).toList());
-    await prefs.setString('codigos_etiquetas', jsonString);
+    final jsonString = json.encode(codigosLidosPlacas.map((e) => e.toJson()).toList());
+    await prefs.setString('codigos_placas', jsonString);
   }
 
-  void _adicionarCodigos(List<CodigoEtiqueta> novos) {
+  void _adicionarCodigos(List<CodigoPlaca> novos) {
     setState(() {
       final novosFiltrados = novos.where((novo) =>
-        !codigosLidos.any((existente) =>
-          existente.codigo == novo.codigo && existente.etiqueta == novo.etiqueta
+        !codigosLidosPlacas.any((existente) =>
+          existente.codigo == novo.codigo && existente.placa == novo.placa
         )
       ).toList();
 
-      codigosLidos.addAll(novosFiltrados);
+      codigosLidosPlacas.addAll(novosFiltrados);
     });
     _salvarCodigos();
   }
 
   void _limparCodigos() async {
-    if (codigosLidos.isEmpty) {
+    if (codigosLidosPlacas.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Nenhum código escaneado para limpar.'),
@@ -127,9 +127,9 @@ void _compartilharCodigos() {
     }
 
     final prefs = await SharedPreferences.getInstance();
-    await prefs.remove('codigos_etiquetas');
+    await prefs.remove('codigos_placas');
     setState(() {
-      codigosLidos.clear();
+      codigosLidosPlacas.clear();
     });
     // ignore: use_build_context_synchronously
     ScaffoldMessenger.of(context).showSnackBar(
@@ -137,9 +137,9 @@ void _compartilharCodigos() {
     );
   }
 
-  void _mostrarModal(String etiqueta) {
-    final filtrados = codigosLidos
-        .where((element) => element.etiqueta == etiqueta)
+  void _mostrarModal(String placa) {
+    final filtrados = codigosLidosPlacas
+        .where((element) => element.placa == placa)
         .toList();
 
     showModalBottomSheet(
@@ -167,7 +167,7 @@ void _compartilharCodigos() {
                           border: Border.all(color: Colors.red),
                         ),
                         child: const Text(
-                          'Nenhum código escaneado para esta etiqueta.',
+                          'Nenhum código escaneado para esta Placa.',
                           style: TextStyle(color: Colors.red, fontSize: 16),
                           textAlign: TextAlign.center,
                         ),
@@ -175,11 +175,11 @@ void _compartilharCodigos() {
                     )
                   else
                     _ModalCodigos(
-                      etiqueta: etiqueta,
+                      placa: placa,
                       codigos: filtrados,
                       onExcluir: (codigo) {
                         setState(() {
-                          codigosLidos.removeWhere((e) => e.codigo == codigo && e.etiqueta == etiqueta);
+                          codigosLidosPlacas.removeWhere((e) => e.codigo == codigo && e.placa == placa);
                         });
                         _salvarCodigos();
                         setModalState(() {});
@@ -193,7 +193,7 @@ void _compartilharCodigos() {
                       child: ElevatedButton.icon(
                         icon: const Icon(Icons.qr_code_scanner, size: 28),
                         label: Text(
-                          'Escanear etiqueta [$etiqueta]',
+                          'Escanear Placa [$placa]',
                           style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                         ),
                         style: ElevatedButton.styleFrom(
@@ -206,17 +206,17 @@ void _compartilharCodigos() {
                         ),
                         onPressed: () async {
                           Navigator.pop(context);
-                          final novosCodigos = await Navigator.push<List<CodigoEtiqueta>>(
+                          final novosCodigos = await Navigator.push<List<CodigoPlaca>>(
                             context,
                             MaterialPageRoute(
-                              builder: (_) => ScannerEtiquetaPage(etiqueta: etiqueta),
+                              builder: (_) => ScannerPlacaPage(placa: placa),
                             ),
                           );
                           if (novosCodigos != null && novosCodigos.isNotEmpty) {
                             setState(() {
                               for (var c in novosCodigos) {
-                                if (!codigosLidos.any((e) => e.codigo == c.codigo && e.etiqueta == c.etiqueta)) {
-                                  codigosLidos.add(c);
+                                if (!codigosLidosPlacas.any((e) => e.codigo == c.codigo && e.placa == c.placa)) {
+                                  codigosLidosPlacas.add(c);
                                 }
                               }
                             });
@@ -235,15 +235,15 @@ void _compartilharCodigos() {
     ).whenComplete(() => setState(() {}));
   }
 
-  int getTotalPorEtiqueta(String etiqueta) {
-    return codigosLidos.where((e) => e.etiqueta == etiqueta).length;
+  int getTotalPorPlaca(String placa) {
+    return codigosLidosPlacas.where((e) => e.placa == placa).length;
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Etiquetas', style: TextStyle(color: Colors.white)),
+        title: const Text('Placas', style: TextStyle(color: Colors.white)),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.white),
           onPressed: () => Navigator.pop(context),
@@ -270,28 +270,28 @@ void _compartilharCodigos() {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   const Text(
-                    'Etiquetas escaneadas:',
+                    'Placas escaneadas:',
                     style: TextStyle(fontSize: 18, fontWeight: FontWeight.w500),
                     textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 24),
-                  _etiquetaButton(
+                  _placaButton(
                     icon: Icons.label_outline,
-                    label: 'Etiqueta Branca (${getTotalPorEtiqueta("Branca")})',
+                    label: 'Placa Pequena (${getTotalPorPlaca("Pequena")})',
                     color: const Color(0xFF6ECBFF),
-                    onPressed: () => _mostrarModal("Branca"),
+                    onPressed: () => _mostrarModal("Pequena"),
                   ),
                   const SizedBox(height: 16),
-                  _etiquetaButton(
+                  _placaButton(
                     icon: Icons.label,
-                    label: 'Etiqueta Amarela (${getTotalPorEtiqueta("Amarela")})',
+                    label: 'Placa Grande (${getTotalPorPlaca("Grande")})',
                     color: const Color(0xFF6ECBFF),
-                    onPressed: () => _mostrarModal("Amarela"),
+                    onPressed: () => _mostrarModal("Grande"),
                   ),
                   const SizedBox(height: 16),
-                  _etiquetaButton(
+                  _placaButton(
                     icon: Icons.copy_all,
-                    label: 'Etiqueta Duplicadas (${getTotalPorEtiqueta("Duplicada")})',
+                    label: 'Placa Duplicadas (${getTotalPorPlaca("Duplicada")})',
                     color: const Color(0xFF6ECBFF),
                     onPressed: () => _mostrarModal("Duplicada"),
                   ),
@@ -302,10 +302,10 @@ void _compartilharCodigos() {
                     width: double.infinity,
                     child: ElevatedButton.icon(
                       onPressed: () async {
-                        final resultado = await Navigator.push<List<CodigoEtiqueta>>(
+                        final resultado = await Navigator.push<List<CodigoPlaca>>(
                           context,
                           MaterialPageRoute(
-                            builder: (_) => const ScannerPage(),
+                            builder: (_) => const ScannerCamPage(),
                           ),
                         );
 
@@ -401,7 +401,7 @@ void _compartilharCodigos() {
     );
   }
 
-  Widget _etiquetaButton({
+  Widget _placaButton({
     required IconData icon,
     required String label,
     required Color color,
@@ -439,12 +439,12 @@ void _compartilharCodigos() {
 }
 
 class _ModalCodigos extends StatefulWidget {
-  final String etiqueta;
-  final List<CodigoEtiqueta> codigos;
+  final String placa;
+  final List<CodigoPlaca> codigos;
   final void Function(String codigo) onExcluir;
 
   const _ModalCodigos({
-    required this.etiqueta,
+    required this.placa,
     required this.codigos,
     required this.onExcluir,
   });
@@ -454,7 +454,7 @@ class _ModalCodigos extends StatefulWidget {
 }
 
 class _ModalCodigosState extends State<_ModalCodigos> {
-  late List<CodigoEtiqueta> listaFiltrada;
+  late List<CodigoPlaca> listaFiltrada;
 
   @override
   void initState() {
@@ -482,7 +482,7 @@ class _ModalCodigosState extends State<_ModalCodigos> {
         mainAxisSize: MainAxisSize.min,
         children: [
           Text(
-            'Etiqueta ${widget.etiqueta.toLowerCase()}',
+            'Placa ${widget.placa.toLowerCase()}',
             style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 12),

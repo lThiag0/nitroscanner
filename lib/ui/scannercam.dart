@@ -6,22 +6,22 @@ import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import 'package:nitroscanner/model/codigo_etiqueta.dart';
+import 'package:nitroscanner/model/codigo_placa.dart';
 
-class ScannerPage extends StatefulWidget {
-  const ScannerPage({super.key});
+class ScannerCamPage extends StatefulWidget {
+  const ScannerCamPage({super.key});
 
   @override
   // ignore: library_private_types_in_public_api
-  _ScannerPageState createState() => _ScannerPageState();
+  _ScannerCamPageState createState() => _ScannerCamPageState();
 }
 
-class _ScannerPageState extends State<ScannerPage> {
+class _ScannerCamPageState extends State<ScannerCamPage> {
   final MobileScannerController cameraController = MobileScannerController(
     formats: [BarcodeFormat.ean13, BarcodeFormat.ean8],
   );
 
-  final List<CodigoEtiqueta> codigosLidos = [];
+  final List<CodigoPlaca> codigosLidosPlacas = [];
   late final AudioPlayer _player;
   bool isTorchOn = false;
   bool isScanning = false;
@@ -58,11 +58,11 @@ class _ScannerPageState extends State<ScannerPage> {
     cameraController.toggleTorch();
   }
 
-  void _removerCodigo(CodigoEtiqueta codigoEtiqueta) {
-    final index = codigosLidos.indexOf(codigoEtiqueta);
+  void _removerCodigo(CodigoPlaca codigoPlaca) {
+    final index = codigosLidosPlacas.indexOf(codigoPlaca);
     if (index >= 0) {
       setState(() {
-        codigosLidos.removeAt(index);
+        codigosLidosPlacas.removeAt(index);
       });
       _listKey.currentState?.removeItem(
         index,
@@ -73,7 +73,7 @@ class _ScannerPageState extends State<ScannerPage> {
             color: Colors.red[100],
             child: ListTile(
               title: Text(
-                '${codigoEtiqueta.codigo} - ${codigoEtiqueta.etiqueta}',
+                '${codigoPlaca.codigo} - ${codigoPlaca.placa}',
                 style: const TextStyle(color: Colors.red, fontSize: 14),
               ),
             ),
@@ -83,13 +83,13 @@ class _ScannerPageState extends State<ScannerPage> {
     }
   }
 
-  Future<String?> mostrarEscolhaEtiqueta(String codigo) {
+  Future<String?> mostrarEscolhaPlaca(String codigo) {
     return showDialog<String>(
       context: context,
       barrierDismissible: false,
       builder: (context) => AlertDialog(
         title: Text(
-          'Escolha a etiqueta para o código: $codigo',
+          'Escolha a placa para o código: $codigo',
           style: const TextStyle(fontSize: 16, fontWeight: FontWeight.normal),
         ),
         content: Column(
@@ -104,8 +104,8 @@ class _ScannerPageState extends State<ScannerPage> {
                   borderRadius: BorderRadius.circular(12),
                 ),
               ),
-              onPressed: () => Navigator.pop(context, 'Branca'),
-              child: const Text('Etiqueta Branca',
+              onPressed: () => Navigator.pop(context, 'Pequena'),
+              child: const Text('Placa Pequena',
               style: TextStyle(color: Colors.white),
               ),
             ),
@@ -119,8 +119,8 @@ class _ScannerPageState extends State<ScannerPage> {
                   borderRadius: BorderRadius.circular(12),
                 ),
               ),
-              onPressed: () => Navigator.pop(context, 'Amarela'),
-              child: const Text('Etiqueta Amarela',
+              onPressed: () => Navigator.pop(context, 'Grande'),
+              child: const Text('Placa Grande',
               style: TextStyle(color: Colors.white),
               ),
             ),
@@ -135,7 +135,7 @@ class _ScannerPageState extends State<ScannerPage> {
                 ),
               ),
               onPressed: () => Navigator.pop(context, 'Duplicada'),
-              child: const Text('Etiqueta Duplicada',
+              child: const Text('Placa Duplicada',
               style: TextStyle(color: Colors.white),
               ),
             ),
@@ -160,12 +160,12 @@ class _ScannerPageState extends State<ScannerPage> {
     );
   }
 
-  Future<void> _mostrarAlertaCodigoRepetido(String codigo, String etiqueta) async {
+  Future<void> _mostrarAlertaCodigoRepetido(String codigo, String placa) async {
     await showDialog(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Código já escaneado'),
-        content: Text('O código $codigo já foi lido com etiqueta "$etiqueta".'),
+        content: Text('O código $codigo já foi lido com placa "$placa".'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
@@ -192,23 +192,23 @@ class _ScannerPageState extends State<ScannerPage> {
 
         if (beepAtivado) await _playBeep();
 
-        final etiqueta = await mostrarEscolhaEtiqueta(code);
+        final placa = await mostrarEscolhaPlaca(code);
 
-        if (!mounted || etiqueta == null) {
+        if (!mounted || placa == null) {
           setState(() => isScanning = false);
           break;
         }
 
-        final existe = codigosLidos.any((e) => e.codigo == code && e.etiqueta == etiqueta);
+        final existe = codigosLidosPlacas.any((e) => e.codigo == code && e.placa == placa);
 
         if (existe) {
-          await _mostrarAlertaCodigoRepetido(code, etiqueta);
+          await _mostrarAlertaCodigoRepetido(code, placa);
         } else {
           HapticFeedback.mediumImpact();
 
           setState(() {
-            codigosLidos.add(CodigoEtiqueta(codigo: code, etiqueta: etiqueta));
-            _listKey.currentState?.insertItem(codigosLidos.length - 1);
+            codigosLidosPlacas.add(CodigoPlaca(codigo: code, placa: placa));
+            _listKey.currentState?.insertItem(codigosLidosPlacas.length - 1);
           });
         }
 
@@ -222,12 +222,12 @@ class _ScannerPageState extends State<ScannerPage> {
 
   Future<void> salvarCodigos() async {
     final prefs = await SharedPreferences.getInstance();
-    final jsonList = codigosLidos.map((e) => jsonEncode(e.toJson())).toList();
-    await prefs.setStringList('codigosLidosEtiquetas', jsonList);
+    final jsonList = codigosLidosPlacas.map((e) => jsonEncode(e.toJson())).toList();
+    await prefs.setStringList('codigosLidosPlacasPlacas', jsonList);
   }
 
   void _finalizar() async {
-    if (codigosLidos.isEmpty) {
+    if (codigosLidosPlacas.isEmpty) {
       Navigator.pop(context);
       return;
     }
@@ -236,7 +236,7 @@ class _ScannerPageState extends State<ScannerPage> {
       context: context,
       builder: (_) => AlertDialog(
         title: const Text('Finalizar escaneamento?'),
-        content: Text('Você leu ${codigosLidos.length} código(s). Deseja confirmar?'),
+        content: Text('Você leu ${codigosLidosPlacas.length} código(s). Deseja confirmar?'),
         actions: [
           TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancelar')),
           ElevatedButton(onPressed: () => Navigator.pop(context, true), child: const Text('Confirmar')),
@@ -247,7 +247,7 @@ class _ScannerPageState extends State<ScannerPage> {
     if (confirm == true) {
       await salvarCodigos();
       // ignore: use_build_context_synchronously
-      Navigator.pop(context, codigosLidos);
+      Navigator.pop(context, codigosLidosPlacas);
     }
   }
 
@@ -291,7 +291,8 @@ class _ScannerPageState extends State<ScannerPage> {
                 ),
                 if (isScanning)
                   Container(
-                    color: Colors.black.withAlpha((0.3 * 255).round()),
+                    // ignore: deprecated_member_use
+                    color: Colors.black.withOpacity(0.3),
                     child: const Center(
                       child: CircularProgressIndicator(
                           strokeWidth: 5,
@@ -302,7 +303,7 @@ class _ScannerPageState extends State<ScannerPage> {
               ],
             ),
           ),
-          if (codigosLidos.isNotEmpty)
+          if (codigosLidosPlacas.isNotEmpty)
             Container(
               padding: const EdgeInsets.all(12),
               color: Colors.grey[100],
@@ -310,7 +311,7 @@ class _ScannerPageState extends State<ScannerPage> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Total de códigos lidos: ${codigosLidos.length}',
+                    'Total de códigos lidos: ${codigosLidosPlacas.length}',
                     style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
                   ),
                   const SizedBox(height: 8),
@@ -318,14 +319,14 @@ class _ScannerPageState extends State<ScannerPage> {
                     height: 200,
                     child: AnimatedList(
                       key: _listKey,
-                      initialItemCount: codigosLidos.length,
+                      initialItemCount: codigosLidosPlacas.length,
                       itemBuilder: (context, index, animation) {
-                        final codigo = codigosLidos[index];
+                        final codigo = codigosLidosPlacas[index];
                         return SizeTransition(
                           sizeFactor: animation,
                           child: Card(
                             child: ListTile(
-                              title: Text('${codigo.codigo} - ${codigo.etiqueta}'),
+                              title: Text('${codigo.codigo} - ${codigo.placa}'),
                               trailing: IconButton(
                                 icon: const Icon(Icons.delete, color: Colors.red),
                                 onPressed: () => _removerCodigo(codigo),

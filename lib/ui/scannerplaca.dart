@@ -2,24 +2,24 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:audioplayers/audioplayers.dart';
-import 'package:nitroscanner/model/codigo_etiqueta.dart';
+import 'package:nitroscanner/model/codigo_placa.dart';
 
-class ScannerEtiquetaPage extends StatefulWidget {
-  final String etiqueta;
+class ScannerPlacaPage extends StatefulWidget {
+  final String placa;
 
-  const ScannerEtiquetaPage({super.key, required this.etiqueta});
+  const ScannerPlacaPage({super.key, required this.placa});
 
   @override
   // ignore: library_private_types_in_public_api
-  _ScannerEtiquetaPageState createState() => _ScannerEtiquetaPageState();
+  _ScannerPlacaPageState createState() => _ScannerPlacaPageState();
 }
 
-class _ScannerEtiquetaPageState extends State<ScannerEtiquetaPage> {
+class _ScannerPlacaPageState extends State<ScannerPlacaPage> {
   final MobileScannerController cameraController = MobileScannerController(
     formats: [BarcodeFormat.ean13, BarcodeFormat.ean8],
   );
 
-  final List<CodigoEtiqueta> codigosLidos = [];
+  final List<CodigoPlaca> codigosLidos = [];
   late final AudioPlayer _player;
   bool isTorchOn = false;
   bool isScanning = false;
@@ -57,8 +57,8 @@ class _ScannerEtiquetaPageState extends State<ScannerEtiquetaPage> {
     cameraController.toggleTorch();
   }
 
-  void _removerCodigo(CodigoEtiqueta codigoEtiqueta) {
-    final index = codigosLidos.indexOf(codigoEtiqueta);
+  void _removerCodigo(CodigoPlaca codigoPlaca) {
+    final index = codigosLidos.indexOf(codigoPlaca);
     if (index >= 0) {
       setState(() => codigosLidos.removeAt(index));
       _listKey.currentState?.removeItem(
@@ -70,7 +70,7 @@ class _ScannerEtiquetaPageState extends State<ScannerEtiquetaPage> {
             color: Colors.red[100],
             child: ListTile(
               title: Text(
-                '${codigoEtiqueta.codigo} - ${codigoEtiqueta.etiqueta}',
+                '${codigoPlaca.codigo} - ${codigoPlaca.placa}',
                 style: const TextStyle(color: Colors.red, fontSize: 14),
               ),
             ),
@@ -123,7 +123,7 @@ class _ScannerEtiquetaPageState extends State<ScannerEtiquetaPage> {
           await _playBeep();
           if (!mounted) return;
           setState(() {
-            codigosLidos.add(CodigoEtiqueta(codigo: code, etiqueta: widget.etiqueta));
+            codigosLidos.add(CodigoPlaca(codigo: code, placa: widget.placa));
             _listKey.currentState?.insertItem(codigosLidos.length - 1);
           });
           HapticFeedback.mediumImpact();
@@ -189,7 +189,7 @@ class _ScannerEtiquetaPageState extends State<ScannerEtiquetaPage> {
       await _playBeep();
       if (!mounted) return;
       setState(() {
-        codigosLidos.add(CodigoEtiqueta(codigo: codigoManual, etiqueta: widget.etiqueta));
+        codigosLidos.add(CodigoPlaca(codigo: codigoManual, placa: widget.placa));
         _listKey.currentState?.insertItem(codigosLidos.length - 1);
       });
       HapticFeedback.mediumImpact();
@@ -221,7 +221,7 @@ class _ScannerEtiquetaPageState extends State<ScannerEtiquetaPage> {
     return Scaffold(
       appBar: AppBar(
         title: Text(
-          'Scanner Cam ${widget.etiqueta}',
+          'Scanner Cam ${widget.placa}',
           style: const TextStyle(color: Colors.white, fontSize: 18),
         ),
         backgroundColor: const Color.fromARGB(255, 20, 121, 189),
@@ -310,7 +310,7 @@ class _ScannerEtiquetaPageState extends State<ScannerEtiquetaPage> {
                       key: _listKey,
                       initialItemCount: codigosLidos.length,
                       itemBuilder: (context, index, animation) {
-                        final codigoEtiqueta = codigosLidos[index];
+                        final codigoPlaca = codigosLidos[index];
                         return SizeTransition(
                           sizeFactor: animation,
                           child: Card(
@@ -324,13 +324,13 @@ class _ScannerEtiquetaPageState extends State<ScannerEtiquetaPage> {
                                   Padding(
                                     padding: const EdgeInsets.only(left: 16.0),
                                     child: Text(
-                                      '${codigoEtiqueta.codigo} - ${codigoEtiqueta.etiqueta}',
+                                      '${codigoPlaca.codigo} - ${codigoPlaca.placa}',
                                       style: const TextStyle(fontSize: 14),
                                     ),
                                   ),
                                   IconButton(
                                     icon: const Icon(Icons.delete, color: Colors.red),
-                                    onPressed: () => _removerCodigo(codigoEtiqueta),
+                                    onPressed: () => _removerCodigo(codigoPlaca),
                                   ),
                                 ],
                               ),
