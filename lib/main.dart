@@ -1,10 +1,17 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart'; // necessário para controlar orientação
 import 'package:nitroscanner/ui/etiquetas.dart';
 import 'package:nitroscanner/ui/homepage.dart';
 import 'package:nitroscanner/ui/info.dart';
 
-void main() {
-  runApp(MyApp());
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  await SystemChrome.setPreferredOrientations([
+    DeviceOrientation.portraitUp,
+  ]);
+
+  runApp(const MyApp());
 }
 
 class MyApp extends StatelessWidget {

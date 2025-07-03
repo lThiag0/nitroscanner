@@ -179,41 +179,40 @@ class _ScannerPageState extends State<ScannerPage> {
   void _onBarcodeDetected(BarcodeCapture barcodeCapture) async {
     if (isScanning) return;
 
+    final barcode = barcodeCapture.barcodes.firstOrNull;
+    final code = barcode?.rawValue;
+
+    if (code == null || code.isEmpty) return;
+
     setState(() => isScanning = true);
 
-    for (final barcode in barcodeCapture.barcodes) {
-      final code = barcode.rawValue;
+    if (validarCodigoEan && !validarEAN(code)) {
+      setState(() => isScanning = false);
+      return;
+    }
 
-      if (code != null && code.isNotEmpty) {
-        if (validarCodigoEan && !validarEAN(code)) {
-          setState(() => isScanning = false);
-          break;
-        }
+    if (beepAtivado) await _playBeep();
 
-        if (beepAtivado) await _playBeep();
+    final etiqueta = await mostrarEscolhaEtiqueta(code);
 
-        final etiqueta = await mostrarEscolhaEtiqueta(code);
+    if (!mounted || etiqueta == null) {
+      await Future.delayed(const Duration(milliseconds: 1000));
+      if (mounted) setState(() => isScanning = false);
+      return;
+    }
 
-        if (!mounted || etiqueta == null) {
-          setState(() => isScanning = false);
-          break;
-        }
+    final existe = codigosLidos.any((e) => e.codigo == code && e.etiqueta == etiqueta);
 
-        final existe = codigosLidos.any((e) => e.codigo == code && e.etiqueta == etiqueta);
+    if (existe) {
+      await _mostrarAlertaCodigoRepetido(code, etiqueta);
+    } else {
+      HapticFeedback.mediumImpact();
 
-        if (existe) {
-          await _mostrarAlertaCodigoRepetido(code, etiqueta);
-        } else {
-          HapticFeedback.mediumImpact();
+      setState(() {
+        codigosLidos.add(CodigoEtiqueta(codigo: code, etiqueta: etiqueta));
+        _listKey.currentState?.insertItem(codigosLidos.length - 1);
+      });
 
-          setState(() {
-            codigosLidos.add(CodigoEtiqueta(codigo: code, etiqueta: etiqueta));
-            _listKey.currentState?.insertItem(codigosLidos.length - 1);
-          });
-        }
-
-        break;
-      }
     }
 
     await Future.delayed(const Duration(milliseconds: 1500));

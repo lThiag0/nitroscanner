@@ -179,41 +179,40 @@ class _ScannerCamPageState extends State<ScannerCamPage> {
   void _onBarcodeDetected(BarcodeCapture barcodeCapture) async {
     if (isScanning) return;
 
+    final barcode = barcodeCapture.barcodes.firstOrNull;
+    final code = barcode?.rawValue;
+
+    if (code == null || code.isEmpty) return;
+
     setState(() => isScanning = true);
 
-    for (final barcode in barcodeCapture.barcodes) {
-      final code = barcode.rawValue;
+    if (validarCodigoEan && !validarEAN(code)) {
+      setState(() => isScanning = false);
+      return;
+    }
 
-      if (code != null && code.isNotEmpty) {
-        if (validarCodigoEan && !validarEAN(code)) {
-          setState(() => isScanning = false);
-          break;
-        }
+    if (beepAtivado) await _playBeep();
 
-        if (beepAtivado) await _playBeep();
+    final placa = await mostrarEscolhaPlaca(code);
 
-        final placa = await mostrarEscolhaPlaca(code);
+    if (!mounted || placa == null) {
+      await Future.delayed(const Duration(milliseconds: 1000));
+      if (mounted) setState(() => isScanning = false);
+      return;
+    }
 
-        if (!mounted || placa == null) {
-          setState(() => isScanning = false);
-          break;
-        }
+    final existe = codigosLidosPlacas.any((e) => e.codigo == code && e.placa == placa);
 
-        final existe = codigosLidosPlacas.any((e) => e.codigo == code && e.placa == placa);
+    if (existe) {
+      await _mostrarAlertaCodigoRepetido(code, placa);
+    } else {
+      HapticFeedback.mediumImpact();
 
-        if (existe) {
-          await _mostrarAlertaCodigoRepetido(code, placa);
-        } else {
-          HapticFeedback.mediumImpact();
+      setState(() {
+        codigosLidosPlacas.add(CodigoPlaca(codigo: code, placa: placa));
+        _listKey.currentState?.insertItem(codigosLidosPlacas.length - 1);
+      });
 
-          setState(() {
-            codigosLidosPlacas.add(CodigoPlaca(codigo: code, placa: placa));
-            _listKey.currentState?.insertItem(codigosLidosPlacas.length - 1);
-          });
-        }
-
-        break;
-      }
     }
 
     await Future.delayed(const Duration(milliseconds: 1500));
